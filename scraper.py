@@ -1,5 +1,10 @@
 # Author: Colin Tiller
 
+# Resources:
+# https://selenium-python.readthedocs.io/waits.html
+# https://selenium-python.readthedocs.io/locating-elements.html
+# https://pypi.org/project/webdriver-manager/
+
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
