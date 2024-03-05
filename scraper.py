@@ -4,6 +4,7 @@
 # https://selenium-python.readthedocs.io/waits.html
 # https://selenium-python.readthedocs.io/locating-elements.html
 # https://pypi.org/project/webdriver-manager/
+# https://www.freecodecamp.org/news/lambda-sort-list-in-python/
 
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
@@ -61,6 +62,7 @@ def get_job_listing_links(driver, links):
             EC.presence_of_all_elements_located((By.XPATH, "/html/body/div/ul[1]/li/strong/a"))
         )
         for job in job_listings:
+            # Only get ziprecruiter links  -- idk why this doesnt work
             if "ziprecruiter" in job.get_attribute("href"):
                 links.append(job.get_attribute("href"))
     except Exception as e:
@@ -145,7 +147,7 @@ def process_webpage(driver, link):
     return job_info
 
 
-def main():
+def main(search_terms, location, pages):
     service = Service(ChromeDriverManager().install())
     options = webdriver.ChromeOptions()
     # options.add_argument("--headless")
@@ -153,19 +155,15 @@ def main():
     site = "https://www.collegegrad.com/"
     
     driver.get(site)
-    
-    search_terms = "Software, Data, Computer, Information, Technology"
-    location = "North Carolina"
-    
+
     search_jobs(driver, search_terms, location)
-    
     # Init list to store listings
     links = []
     
-    for _ in range(1):
+    for _ in range(pages):
         get_job_listing_links(driver, links)
         paginate(driver)
-        time.sleep(2)  # be nice to the website :>
+        time.sleep(1)  # be nice to the website :>
         
     
     # Get details from each listing
@@ -179,12 +177,30 @@ def main():
         time.sleep(1) 
     
     # Write to file jsonlines .jl
-    with open('jobs.jl', 'w') as f:
-        for item in details:
-            f.write(json.dumps(item, ensure_ascii=False) + "\n")
+    # Sort the jsonlines by listing date, then sort by location
+    details = sorted(details, key=lambda x: x["posted_date"], reverse=True)
+    details = sorted(details, key=lambda x: x["location"], reverse=False)
 
+    # # Remove any elements that don't have our keywords somewhere in the description
+    # -- Currently removing too much
+    # details = [job for job in details if any(
+    #     term in job["description"] for term in search_terms.split(", ")
+    # )]
+
+    # https://stackoverflow.com/questions/3224268/python-unicode-encode-error
+    with open('jobs.jl', 'w', encoding='utf-8') as f:
+        for item in details:
+            try:
+                f.write(json.dumps(item, ensure_ascii=False) + "\n")
+            except UnicodeEncodeError:
+
+                f.write(json.dumps(item, ensure_ascii=False).encode('utf-8', errors='ignore').decode() + "\n")
     driver.quit()
     
     
 if __name__ == "__main__":
-    main()
+    search_terms = "Software, Data, Computer, Information, Technology, Developer"
+    location = "North Carolina"
+    pages = 3
+
+    main(search_terms, location, pages)
